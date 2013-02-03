@@ -1,0 +1,141 @@
+=head1 NAME
+
+ tt2rom - convert truth table (ASM chart) to EEPROM programmer input
+
+=head1 SYNOPSIS
+
+ tt2rom [options] <filename>
+
+=head1 DESCRIPTION
+
+B<tt2rom> converts an algorithmic state machine (ASM chart),
+represented as a truth table, into an Intel HEX format file, for use
+by commonly-available EEPROM programmers.  A truth table has inputs
+which are defined as '0' or '1', or left undefined as 'x'.  Outputs
+are defined as '0' or '1', or left undefined as '-'.  By default, all
+undefined outputs are forced high (1) on output, although this can be
+changed using the I<--output-dc> option (see below).
+
+The input file is processed, and any errors encountered are reported
+to the standard output, giving a line number and an indication of the
+problem.  Assuming there are no problems with the input, a ROM image
+is generated for each ROM specified in the truth table, and written
+out to a file named 'sourceX.hex', where 'X' is the number of the ROM
+specified in the input file.
+
+=head1 OPTIONS
+
+The following command-line options are available:
+
+=over 4
+
+=item --help
+
+	Display a help message summarizing command line options
+	and usage instructions, and exit the program.
+
+=item --version
+
+	Display version and copyright information for the program,
+	and exit.
+
+=item --output-dc=X
+
+	Set the default value for unspecified outputs to X, where
+	X is a 0 or a 1.  No other values are permitted.  If you
+	omit this option, the current version of B<tt2rom> will emit
+	a 1 for each unspecified output.
+
+=item --output-fmt=[raw|text|intel]
+
+	Set the output format.  Defaults to 'intel', which is an
+	Intel HEX format file.  Raw means to dump the ROM image
+	as a binary file.  Text means to emit the bytes in a 
+	human-readable text format with addresses.
+
+=back
+
+The empty option, '--', can be used to stop argument processing.  You
+can use this if for some silly reason you have to deal with an input
+file whose name begins with two hyphens.
+
+=head1 FILE FORMAT
+
+The input to B<tt2rom> is a text file specifying the truth table
+inputs and outputs.  The first non-blank line of the file is a format
+line, which describes the order and type of bits specified on the rest
+of the lines.  Input or address bits are designated with the 
+letter 'A'.  Output bits are designated by their ROM ID number.
+
+The ROM ID is a single digit specifying which ROM the output bit in
+that position will be sent to.  This version of B<tt2rom> supports ROM
+ID's from 0-9 inclusive, so you can specify up to ten ROMs using the
+same input file.  An example format line that has 7 input bits and 14
+output bits might look like this:
+
+	AAA AAAA	0000 00	1111 1111
+
+In this example, the seven least-significant address bits (A6-A0) are
+used.  The least-significant bit is rightmost, and all unspecified
+higher address bits (e.g., A7, A8) are assumed to be zero.  Notice
+that two ROMs (with ROM ID's 0 and 1) are used in this example.  Thus,
+the six least-significant output bits (O5-O0) of ROM 0 are used, while
+all the output bits for ROM 1 are used.
+
+Spaces between columns are ignored by B<tt2rom> during processing;
+only the order of the columns is significant.  You may therefore use
+whitespace freely to divide up or line up various important values in
+a meaningful way for yourself, the human reader of the file.  The
+order of the columns is determined by the format line, however, so in
+a file which has the format line given above, the first seven bits on
+any line will be assumed to be address bits, the next six data bits
+for ROM 0, and the remaining eight data bits for ROM 1.
+
+An example truth-table line for the above example format line might
+look something like this:
+
+	001 xx0x	---1 01	---0 1100
+
+Recall that 'x' represents a "don't care" input, while '-' represents
+a don't care for an output.  In general, we recommend that you
+I<always define your outputs>, even if they are not used.
+
+You may insert comments on any line in the file, to document your
+truth table and aid legibility.  A comment is introduced by a hash
+mark (#), and goes to the end of the line that it is on.  Comments are
+ignored by B<tt2rom>, so you may put anything you want there.  You may
+also use the commenting facility to "comment out" portions of the
+truth table you don't want to see, but may want to keep for later.
+
+=head1 NOTES
+
+This version of B<tt2rom> was based heavily on the original B<tt2rom>
+program written by Anthony Edwards and modified by Dav Haas.  This
+version removes the limitation of the previous version to ROM images
+of 64 kilobytes or less.  Also, the input processing has been improved
+slightly, to permit suffix comments (instead of just whole-line
+comments), and to remove the strict dependency on column alignment.
+
+=head1 ENVIRONMENT
+
+You can change the default output file name by setting the environment
+variable B<FTEMPLATE> to contain the pattern to use for the file name.
+The template should be a legal filename string, containing somewhere
+in it the substring '%d', which is where the ROM number wil be
+substituted when the output is written.  
+
+If you do I<not> set the B<FTEMPLATE> variable, the output file name
+defaults to 'file0.hex', 'file1.hex', etc., where 'file' is the name
+of the corresponding input file.  If the input file name cannot be
+determined, the format 'output0.hex' is used.
+
+=head1 AUTHOR
+
+ Michael J. Fromberger <sting@linguist.dartmouth.edu>
+ Thayer School of Engineering, Hanover, New Hampshire, USA
+ Copyright (C) 1999 The Trustees of Dartmouth College
+
+ $Date: 2005/05/25 19:51:46 $
+
+Suggestions, comments, complaints, and bug reports should be sent to
+the author; or, if he cannot be located, to the Director of Computing.

@@ -1,0 +1,20 @@
+#
+# Test assembly file for tt2rom version 2
+#
+
+# Format line...
+
+AAA 000 0 000 111
+
+000 111 1 111 100
+001 000 1 001 000
+010 001 0 110 000
+011 010 1 101 110
+100 111 1 111 010
+
+#
+# Some random comments
+#
+101 111 0 000 010	# end of line comments okay too
+110 011 0 110 101
+111 111 1 111 001
