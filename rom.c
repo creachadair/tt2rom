@@ -9,9 +9,9 @@
 
 #include "rom.h"
 
-#include <stdlib.h>
 #include <ctype.h>
 #include <limits.h>
+#include <stdlib.h>
 
 /* Get bits 16-19 out of the given address, and left-justify */
 #define SEGMENT(A) (((A >> 16) & 0xF) << 12)
@@ -24,8 +24,7 @@ static void write_end_record(FILE *ofp);
 /* The checksum used by the Intel ROM programmer is the two's
    complement of the sum of the bytes of the data being checked.
  */
-byte compute_data_checksum(byte count, address addr, byte *data)
-{
+byte compute_data_checksum(byte count, address addr, byte *data) {
   int ix;
   unsigned int sum = count; /* sum includes record size */
   byte out;
@@ -36,22 +35,19 @@ byte compute_data_checksum(byte count, address addr, byte *data)
   sum += DATA_REC;
 
   /* Include data field in checksum */
-  for(ix = 0; ix < count; ix++)
-    sum += data[ix];
+  for (ix = 0; ix < count; ix++) sum += data[ix];
 
-  out = sum & UCHAR_MAX;  /* strip low-order byte  */
+  out = sum & UCHAR_MAX; /* strip low-order byte  */
 #ifdef DEBUG
-  fprintf(stderr, "compute_data_checksum: sum = %X, out = %02X\n",
-          sum, ~out + 1);
+  fprintf(stderr, "compute_data_checksum: sum = %X, out = %02X\n", sum,
+          ~out + 1);
 #endif
 
-  return ~out + 1;        /* take two's complement */
+  return ~out + 1; /* take two's complement */
 
 } /* end of compute_data_checksum() */
 
-
-byte compute_offset_checksum(address offset)
-{
+byte compute_offset_checksum(address offset) {
   unsigned int sum = 0;
   byte out;
 
@@ -62,20 +58,15 @@ byte compute_offset_checksum(address offset)
 
   out = sum & UCHAR_MAX;
 #ifdef DEBUG
-  fprintf(stderr, "compute_offset_checksum: sum = %X, out = %02X\n",
-          sum, ~out + 1);
+  fprintf(stderr, "compute_offset_checksum: sum = %X, out = %02X\n", sum,
+          ~out + 1);
 #endif
 
   return ~out + 1;
 
 } /* end of compute_offset_checksum() */
 
-
-byte compute_end_checksum(void)
-{
-  return ~END_REC + 1;
-}
-
+byte compute_end_checksum(void) { return ~END_REC + 1; }
 
 /* Using 'addr' as a base address, possibly including "don't care"
    designators, write byte value 'val' to all the memory addresses
@@ -89,25 +80,22 @@ byte compute_end_checksum(void)
 
    This algorithm stolen from the original tt2rom by Anthony Edwards
  */
-void write_range(byte *rom, char *addr, int alen, byte val)
-{
-  char *wild;  /* array indicating positions of don't-care bits */
+void write_range(byte *rom, char *addr, int alen, byte val) {
+  char *wild; /* array indicating positions of don't-care bits */
   int ix, jx, kx, count = 0;
   address base = 0;
 
-  if((wild = calloc(alen, sizeof(char))) == NULL)
-    return;
+  if ((wild = calloc(alen, sizeof(char))) == NULL) return;
 
   /* Construct base address with all don't-care bits set to zero */
-  for(ix = 0; ix < alen; ix++) {
-    if(tolower(addr[ix]) == 'x') {
+  for (ix = 0; ix < alen; ix++) {
+    if (tolower(addr[ix]) == 'x') {
       wild[ix] = 1;
       ++count; /* keep count of # of don't-care bits */
     }
 
     base <<= 1;
-    if(addr[ix] == '1')
-      base |= 1;
+    if (addr[ix] == '1') base |= 1;
   }
 
   /* Now iterate over all possible combinations of don't-care bits.
@@ -123,15 +111,14 @@ void write_range(byte *rom, char *addr, int alen, byte val)
    */
   count = (1 << count);
 
-  for(ix = 0; ix < count; ix++) {
-    address off = 0;   /* offset from base address */
+  for (ix = 0; ix < count; ix++) {
+    address off = 0; /* offset from base address */
 
     /*  Construct the offset for the next counter value */
-    for(jx = 0, kx = 0; jx < alen; jx++) {
+    for (jx = 0, kx = 0; jx < alen; jx++) {
       off <<= 1;
 
-      if(wild[jx])
-        off |= (ix >> kx++) & 1;
+      if (wild[jx]) off |= (ix >> kx++) & 1;
     }
 
     /*  Write the byte value to this location in the ROM image */
@@ -142,36 +129,27 @@ void write_range(byte *rom, char *addr, int alen, byte val)
 
 } /* end of write_range() */
 
-
-void dump_raw(byte *rom, int rlen, FILE *ofp)
-{
+void dump_raw(byte *rom, int rlen, FILE *ofp) {
   fwrite(rom, sizeof(byte), rlen, ofp);
 
 } /* end of dump_raw() */
 
-
-void dump_text(byte *rom, int rlen, FILE *ofp)
-{
+void dump_text(byte *rom, int rlen, FILE *ofp) {
   int pos, brk = 0;
 
-  for(pos = 0; pos < rlen; pos++) {
-    if(brk == 0)
-      fprintf(ofp, "%05X:", pos);
+  for (pos = 0; pos < rlen; pos++) {
+    if (brk == 0) fprintf(ofp, "%05X:", pos);
 
     fprintf(ofp, " %02X", rom[pos]);
 
     brk = (brk + 1) & 15;
-    if(brk == 0)
-      fputc('\n', ofp);
+    if (brk == 0) fputc('\n', ofp);
   }
-  if(brk != 0)
-    fputc('\n', ofp);
+  if (brk != 0) fputc('\n', ofp);
 
 } /* end of dump_text() */
 
-
-void dump_intel(byte *rom, int rlen, FILE *ofp)
-{
+void dump_intel(byte *rom, int rlen, FILE *ofp) {
   address cur = 0, seg = 0;
 
   /* Begin by priming the segment register */
@@ -180,11 +158,11 @@ void dump_intel(byte *rom, int rlen, FILE *ofp)
   /* Write out data records in CHUNK_SIZE blocks, until the whole ROM
      has been written, or a smaller chunk remains
    */
-  while(cur + CHUNK_SIZE <= rlen)  {
+  while (cur + CHUNK_SIZE <= rlen) {
     /* If the segment register has changed, update it, and issue a new
        offset record
      */
-    if(SEGMENT(cur) != seg) {
+    if (SEGMENT(cur) != seg) {
       seg = SEGMENT(cur);
       write_offset_record(seg, ofp);
     }
@@ -194,8 +172,8 @@ void dump_intel(byte *rom, int rlen, FILE *ofp)
   }
 
   /* If there's a small block at the end, write it out now ... */
-  if(cur < rlen) {
-    if(SEGMENT(cur) != seg) {
+  if (cur < rlen) {
+    if (SEGMENT(cur) != seg) {
       seg = SEGMENT(cur);
       write_offset_record(seg, ofp);
     }
@@ -208,14 +186,12 @@ void dump_intel(byte *rom, int rlen, FILE *ofp)
 
 } /* end of dump_intel() */
 
-
 /*------------------------------------------------------------------------*/
 
 /* These functions do the work for dump_intel() above, for the various
    types of records it needs to put into the output stream
  */
-void write_data_record(byte *data, int len, address addr, FILE *ofp)
-{
+void write_data_record(byte *data, int len, address addr, FILE *ofp) {
   byte chk;
   int ix;
 
@@ -226,8 +202,7 @@ void write_data_record(byte *data, int len, address addr, FILE *ofp)
   fprintf(ofp, "%04X%02X", addr, DATA_REC);
 
   /* Output data field ... */
-  for(ix = 0; ix < len; ix++)
-    fprintf(ofp, "%02X", data[ix]);
+  for (ix = 0; ix < len; ix++) fprintf(ofp, "%02X", data[ix]);
 
   /* Compute and output checksum byte, and terminate record */
   chk = compute_data_checksum(len, addr, data);
@@ -235,9 +210,7 @@ void write_data_record(byte *data, int len, address addr, FILE *ofp)
 
 } /* end write_data_record() */
 
-
-void write_offset_record(address offset, FILE *ofp)
-{
+void write_offset_record(address offset, FILE *ofp) {
   byte chk;
 
   /* Output start character, data length, address, and record type */
@@ -252,9 +225,7 @@ void write_offset_record(address offset, FILE *ofp)
 
 } /* end write_offset_record() */
 
-
-void write_end_record(FILE *ofp)
-{
+void write_end_record(FILE *ofp) {
   byte chk;
 
   chk = compute_end_checksum();
